@@ -11,6 +11,7 @@ import {
   Links,
   useLoaderData,
   useNavigation,
+  useSubmit,
 } from '@remix-run/react';
 import appStylesHref from './app.css?url';
 import { createEmptyContact, getContacts } from './data';
@@ -31,7 +32,9 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 export default function App() {
   const { contacts, q } = useLoaderData<typeof loader>();
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const submit = useSubmit();
   const navigation = useNavigation();
+  const searching = navigation.location && new URLSearchParams(navigation.location.search).has('q');
 
   useEffect(() => {
     if (searchInputRef.current instanceof HTMLInputElement) {
@@ -51,17 +54,27 @@ export default function App() {
         <div id="sidebar">
           <h1>Remix Contacts</h1>
           <div>
-            <Form id="search-form" role="search">
+            <Form
+              id="search-form"
+              onChange={(event) => {
+                const isFirstSearch = q === null;
+                submit(event.currentTarget, {
+                  replace: !isFirstSearch,
+                });
+              }}
+              role="search"
+            >
               <input
                 defaultValue={q ?? ''}
                 id="q"
+                className={searching ? 'loading' : ''}
                 ref={searchInputRef}
                 aria-label="Search contacts"
                 placeholder="Search"
                 type="search"
                 name="q"
               />
-              <div id="search-spinner" aria-hidden hidden={true} />
+              <div id="search-spinner" aria-hidden hidden={!searching} />
             </Form>
             <Form method="post">
               <button type="submit">New</button>
@@ -98,7 +111,7 @@ export default function App() {
             )}
           </nav>
         </div>
-        <div id="detail" className={navigation.state === 'loading' ? 'loading' : ''}>
+        <div id="detail" className={navigation.state === 'loading' && !searching ? 'loading' : ''}>
           <Outlet />
         </div>
         <ScrollRestoration />
